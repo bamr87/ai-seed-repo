@@ -1,0 +1,25 @@
+# Additional development dependencies
+pytest-xdist==3.6.0
+pytest-benchmark==4.0.0
+coverage==7.6.0
+pre-commit==3.8.0
+tox==4.15.0
+
+# Documentation development
+mkdocs-serve==1.2.0
+mkdocs-macros-plugin==1.0.5
+
+# Code formatting and linting (dev versions)
+black[jupyter]==24.8.0
+flake8-docstrings==1.7.0
+flake8-bugbear==24.8.0
+mypy-extensions==1.0.0
+
+# Testing utilities
+factory-boy==3.3.0
+faker==28.4.0
+responses==0.25.0
+
+# Performance monitoring
+memory-profiler==0.61.0
+py-spy==0.3.14

@@ -1,0 +1,67 @@
+name: "evolve-on-issue"
+description: "Triggers AI agent workflow when issues are created or updated"
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  trigger-evolution:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'evolution') || contains(github.event.issue.title, '[EVOLUTION]')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Configure environment
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> $GITHUB_ENV
+          echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${GITHUB_TOKEN}" >> $GITHUB_ENV
+
+      - name: Run evolution workflow
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          REPOSITORY_NAME: ${{ github.repository }}
+          BRANCH_NAME: "evolution-issue-${{ github.event.issue.number }}"
+        run: |
+          python -m agents.orchestrator \
+            --issue-number "$ISSUE_NUMBER" \
+            --issue-title "$ISSUE_TITLE" \
+            --issue-body "$ISSUE_BODY" \
+            --repository "$REPOSITORY_NAME" \
+            --branch-name "$BRANCH_NAME"
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = ${{ github.event.issue.number }};
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '🤖 **Evolution Initiated!**\n\nThe AI agent crew has been dispatched to implement your request. You can monitor progress in the Actions tab and expect a pull request shortly.\n\n*Agents at work:* Planner → Coder → Tester → Documenter → Deployer'
+            });

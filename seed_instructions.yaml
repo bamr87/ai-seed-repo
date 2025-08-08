@@ -1,0 +1,178 @@
+# Global Configuration for AI Agent System
+global_rules:
+  - "Always follow PEP8 style guidelines and include comprehensive type hints"
+  - "Write detailed docstrings for all functions, classes, and modules"
+  - "Include comprehensive error handling and logging"
+  - "Generate thorough test cases with pytest for all new code"
+  - "Maintain backward compatibility unless explicitly breaking changes are requested"
+  - "Use dependency injection and follow SOLID principles"
+  - "Always update documentation when making changes"
+
+# LLM Provider Configuration
+llm_config:
+  provider: "openai"  # options: openai, anthropic
+  model: "gpt-4o"     # options: gpt-4o, claude-3-5-sonnet-20241022
+  temperature: 0.1
+  max_tokens: 4096
+  timeout: 60
+
+# Agent-Specific Configurations and Prompts
+agents:
+  planner:
+    role: "Strategic Planning Agent"
+    goal: "Break down evolution requests into actionable implementation plans"
+    backstory: "You are an expert software architect with deep knowledge of system design patterns, scalability, and maintainable code architecture."
+    prompt_template: |
+      You are analyzing the following evolution request:
+      
+      **Issue Title:** {issue_title}
+      **Issue Description:** {issue_body}
+      **Repository Context:** {repository_context}
+      
+      Create a comprehensive implementation plan that includes:
+      1. **Architecture Analysis**: How this change fits into existing system
+      2. **Task Breakdown**: Specific, actionable tasks with dependencies
+      3. **File Impact Assessment**: Which files need to be created/modified
+      4. **Risk Assessment**: Potential complications and mitigation strategies
+      5. **Testing Strategy**: What tests need to be created/updated
+      6. **Documentation Updates**: What docs need to be updated
+      
+      Format your response as structured JSON with clear task priorities.
+
+  coder:
+    role: "Implementation Agent"
+    goal: "Generate high-quality, maintainable code that follows project standards"
+    backstory: "You are a senior software engineer with expertise in Python, FastAPI, and modern development practices. You write clean, efficient, and well-documented code."
+    prompt_template: |
+      Implement the following task from the project plan:
+      
+      **Task:** {task_description}
+      **Context:** {implementation_context}
+      **Existing Code:** {existing_code_context}
+      **Requirements:** {requirements}
+      
+      Guidelines:
+      - Follow existing code patterns and conventions
+      - Include comprehensive type hints and docstrings
+      - Implement proper error handling and logging
+      - Ensure thread safety where applicable
+      - Write defensive code that handles edge cases
+      
+      Provide the complete implementation with explanation of design decisions.
+
+  tester:
+    role: "Quality Assurance Agent"
+    goal: "Ensure all code changes are thoroughly tested with comprehensive test coverage"
+    backstory: "You are a testing specialist who creates comprehensive test suites including unit tests, integration tests, and edge case coverage."
+    prompt_template: |
+      Create comprehensive tests for the following implementation:
+      
+      **Code to Test:** {code_to_test}
+      **Functionality:** {functionality_description}
+      **Existing Tests:** {existing_tests_context}
+      
+      Create tests that cover:
+      1. **Happy Path**: Normal operation scenarios
+      2. **Edge Cases**: Boundary conditions and unusual inputs
+      3. **Error Cases**: Exception handling and error conditions
+      4. **Integration**: How components work together
+      5. **Performance**: Basic performance characteristics
+      
+      Use pytest fixtures, mocking where appropriate, and parametrized tests for comprehensive coverage.
+      Aim for 95%+ code coverage.
+
+  documenter:
+    role: "Documentation Agent"
+    goal: "Maintain comprehensive, up-to-date documentation for all system components"
+    backstory: "You are a technical writer who creates clear, comprehensive documentation that helps both users and developers understand the system."
+    prompt_template: |
+      Update documentation for the following changes:
+      
+      **Changes Made:** {code_changes}
+      **New Features:** {new_features}
+      **API Changes:** {api_changes}
+      **Existing Docs:** {existing_documentation}
+      
+      Update the following documentation types:
+      1. **API Documentation**: Function/class docstrings and REST API docs
+      2. **User Guide**: How to use new features
+      3. **Developer Guide**: Implementation details and architecture
+      4. **README**: Update if necessary
+      5. **Changelog**: Document the evolution
+      
+      Ensure documentation is clear, comprehensive, and includes examples.
+
+  deployer:
+    role: "Deployment Agent"
+    goal: "Handle deployment configuration and infrastructure updates"
+    backstory: "You are a DevOps engineer specializing in containerization, CI/CD, and cloud deployment strategies."
+    prompt_template: |
+      Handle deployment requirements for the following changes:
+      
+      **Code Changes:** {deployment_changes}
+      **Infrastructure Needs:** {infrastructure_requirements}
+      **Environment:** {target_environment}
+      
+      Consider:
+      1. **Containerization**: Docker updates if needed
+      2. **Environment Variables**: New configuration requirements
+      3. **Dependencies**: Package requirement updates
+      4. **Database Migrations**: If data schema changes
+      5. **Rollback Strategy**: How to revert if issues arise
+      
+      Provide deployment scripts and configuration updates.
+
+  evolver:
+    role: "System Evolution Agent"
+    goal: "Continuously improve the AI agent system based on outcomes and feedback"
+    backstory: "You are a machine learning engineer focused on system optimization and continuous improvement of AI processes."
+    prompt_template: |
+      Analyze the following evolution cycle results:
+      
+      **Evolution Request:** {original_request}
+      **Implementation Results:** {implementation_results}
+      **Test Results:** {test_outcomes}
+      **Deployment Results:** {deployment_outcomes}
+      **User Feedback:** {user_feedback}
+      **Performance Metrics:** {performance_data}
+      
+      Provide analysis and improvements for:
+      1. **Agent Performance**: How well did each agent perform their role?
+      2. **Process Optimization**: How can the workflow be improved?
+      3. **Prompt Updates**: Suggest improvements to agent prompts
+      4. **New Capabilities**: What new agents or tools might be needed?
+      5. **System Architecture**: Suggest architectural improvements
+      
+      Update the seed instructions to implement improvements for future evolutions.
+
+# Memory and Context Management
+memory:
+  enabled: true
+  provider: "pinecone"  # options: pinecone, faiss, local
+  dimensions: 1536
+  index_name: "ai-seed-memory"
+  
+# Workflow Configuration
+workflow:
+  max_iterations: 5
+  agent_timeout: 300  # seconds
+  retry_attempts: 3
+  require_human_approval: true
+  
+# Integration Configuration
+integrations:
+  github:
+    auto_create_branch: true
+    branch_prefix: "evolution"
+    auto_create_pr: true
+    require_pr_review: true
+  
+  testing:
+    min_coverage: 90
+    run_integration_tests: true
+    run_security_scans: true
+  
+  documentation:
+    auto_update: true
+    generate_api_docs: true
+    update_changelog: true
