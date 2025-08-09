@@ -11,7 +11,7 @@ langchain==0.3.0
 langchain-openai==0.2.0
 langchain-anthropic==0.2.0
 langchain-community==0.3.0
-langchain-core==0.3.0
+langchain-core==0.3.15
 
 # Agent tools and integrations
 composio-crewai==0.7.0
