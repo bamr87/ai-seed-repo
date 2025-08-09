@@ -29,7 +29,7 @@ numpy==2.0.0
 
 # GitHub integration
 PyGithub==2.4.0
-gitpython==3.1.40
+gitpython==3.1.41
 
 # Development and testing
 pytest==8.3.0
