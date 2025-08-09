@@ -4,20 +4,21 @@ Triage failed GitHub Actions workflow runs by summarizing logs and creating an i
 This script:
 - Reads configuration from seed_instructions.yaml
 - Aggregates and tails logs from the current directory (unzipped run logs)
-- Uses the Triager agent (CrewAI) to produce a Markdown report
+- Uses the Triager agent (CrewAI) to produce a Markdown report when LLM keys are set
+- Otherwise falls back to a heuristic summary
 - Creates or updates a GitHub Issue with the summary and logs excerpt
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
 
-# Local imports
-from agents.crew_manager import CrewManager
+# Local imports (GitHubIntegration is lightweight)
 from agents.github_integration import GitHubIntegration
 from utils.logger import setup_logger
 
@@ -49,6 +50,22 @@ def collect_logs_excerpt(root: Path, tail: int) -> tuple[str, str]:
     return ("\n".join(job_lines), "\n".join(parts))
 
 
+def simple_summary(workflow_name: str, jobs_summary: str, excerpt: str, tail: int) -> str:
+    """Produce a basic Markdown summary without LLMs."""
+    hint = "Potential network or dependency issue" if "pip install" in excerpt or "Collecting" in excerpt else "Check failing step"
+    return (
+        f"### Auto-Triage Summary (fallback)\n\n"
+        f"Workflow '{workflow_name}' failed.\n\n"
+        f"Jobs/Logs files:\n{jobs_summary}\n\n"
+        f"Likely area: {hint}.\n\n"
+        f"Actions:\n"
+        f"1. Inspect the first failing step in the run.\n"
+        f"2. Re-run failed jobs with increased verbosity.\n"
+        f"3. If dependency-related, try pinning the minimal conflicting version.\n"
+        f"\n(Logs excerpt below shows last {tail} lines per file.)"
+    )
+
+
 async def main_async(args: argparse.Namespace) -> None:
     # Load config
     with open(Path("seed_instructions.yaml"), "r") as f:
@@ -62,7 +79,6 @@ async def main_async(args: argparse.Namespace) -> None:
     jobs_summary, excerpt = collect_logs_excerpt(root, tail)
 
     # Initialize helpers
-    crew = CrewManager(config, mode="triage")
     gh = GitHubIntegration(config)
 
     # Minimal repository context for the triager
@@ -82,8 +98,21 @@ async def main_async(args: argparse.Namespace) -> None:
         "tail_lines": tail,
     }
 
-    # Generate report
-    report_md = await crew.run_triage_report(triage_input)
+    # Decide whether to use LLMs
+    have_llm = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+    if have_llm:
+        try:
+            from agents.crew_manager import (
+                CrewManager,  # lazy import to avoid heavy deps otherwise
+            )
+
+            crew = CrewManager(config, mode="triage")
+            report_md = await crew.run_triage_report(triage_input)
+        except Exception as e:
+            logger.warning(f"Triager unavailable, falling back to simple summary: {e}")
+            report_md = simple_summary(args.workflow_name, jobs_summary, excerpt, tail)
+    else:
+        report_md = simple_summary(args.workflow_name, jobs_summary, excerpt, tail)
 
     # Build issue content
     title = f"[CI Failure] {args.workflow_name} on {args.git_ref} @ {args.commit_sha[:7]}"
@@ -92,7 +121,7 @@ async def main_async(args: argparse.Namespace) -> None:
         f"- Run: {args.run_url}\n"
         f"- Ref: `{args.git_ref}`\n"
         f"- Commit: `{args.commit_sha}`\n\n"
-        f"### Auto-Triage Summary\n\n{report_md}\n\n"
+        f"{report_md}\n\n"
         f"<details><summary>Logs Excerpt (last {tail} lines per file)</summary>\n\n"
         f"````\n{excerpt[:120000]}\n````\n\n"
         f"</details>\n"
