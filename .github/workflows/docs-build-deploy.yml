@@ -29,6 +29,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
         run: |
@@ -55,14 +59,17 @@ jobs:
         if: failure()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           sudo apt-get update -y && sudo apt-get install -y unzip
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          gh run download ${{ github.run_id }} --dir logs || true
-          if ls logs/*.zip 1> /dev/null 2>&1; then
-            unzip -o "logs/*.zip" -d logs || true
-          fi
+          mkdir -p logs
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs > logs.zip || true
+          unzip -o logs.zip -d logs || true
           python scripts/triage_failure.py \
             --workflow-name "${{ github.workflow }}" \
             --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \

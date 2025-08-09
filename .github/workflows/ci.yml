@@ -23,6 +23,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           check-latest: true
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Upgrade pip and install latest dependencies
         run: |
           python -m pip install --upgrade pip
@@ -47,17 +51,16 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "Installing gh CLI extension and deps..."
-          sudo apt-get update -y
-          sudo apt-get install -y unzip
+          echo "Installing deps..."
+          sudo apt-get update -y && sudo apt-get install -y unzip
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          echo "Downloading logs for this run..."
-          gh run download ${{ github.run_id }} --dir logs || true
-          echo "Extracting logs..."
-          if ls logs/*.zip 1> /dev/null 2>&1; then
-            unzip -o "logs/*.zip" -d logs || true
-          fi
+          echo "Downloading logs for this run via API..."
+          mkdir -p logs
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs > logs.zip || true
+          unzip -o logs.zip -d logs || true
           echo "Running triage script to create issue..."
           python scripts/triage_failure.py \
             --workflow-name "${{ github.workflow }}" \

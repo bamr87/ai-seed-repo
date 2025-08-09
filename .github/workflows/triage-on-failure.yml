@@ -1,0 +1,59 @@
+name: "triage-on-failure"
+
+on:
+  workflow_run:
+    workflows: ["CI", "ci-cd-pipeline", "docs-build-deploy", "evolve-on-issue"]
+    types: ["completed"]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  triage:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ensure unzip is available
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y unzip
+
+      - name: Download logs for failed run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p logs
+          echo "Downloading logs for run ID: ${{ github.event.workflow_run.id }}"
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/logs > logs.zip
+          unzip -o logs.zip -d logs || true
+
+      - name: Create triage issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/triage_failure.py \
+            --workflow-name "${{ github.event.workflow_run.name }}" \
+            --run-url "${{ github.event.workflow_run.html_url }}" \
+            --git-ref "${{ github.event.workflow_run.head_branch }}" \
+            --commit-sha "${{ github.event.workflow_run.head_sha }}" \
+            --logs-root logs \
+            --tail-lines 200
