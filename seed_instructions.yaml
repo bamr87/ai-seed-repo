@@ -7,6 +7,17 @@ global_rules:
   - "Maintain backward compatibility unless explicitly breaking changes are requested"
   - "Use dependency injection and follow SOLID principles"
   - "Always update documentation when making changes"
+  - "Use latest stable versions of all dependencies by default; avoid exact pins unless required for compatibility. When pinning, use minimal version bounds and document the reason in-line (e.g., '# pinned: <reason>')."
+
+# Dependency policy for agents
+dependencies:
+  policy: "latest-unpinned"
+  upgrade_strategy: "eager"  # prefer newest transitive deps
+  installer: "pip"           # may switch to 'uv' in future evolutions
+  actions:
+    - "When adding or updating packages, run 'pip install --upgrade <pkg>' and 'pip check' to detect conflicts."
+    - "If CI fails due to dependency conflicts, add the narrowest necessary version constraint and document the reason."
+    - "Periodically refresh requirements files (at least monthly) to pick up new releases."
 
 # LLM Provider Configuration
 llm_config:
@@ -36,6 +47,7 @@ agents:
       4. **Risk Assessment**: Potential complications and mitigation strategies
       5. **Testing Strategy**: What tests need to be created/updated
       6. **Documentation Updates**: What docs need to be updated
+      7. **Dependency Plan**: Identify any new dependencies and confirm they follow the 'latest-unpinned' policy.
       
       Format your response as structured JSON with clear task priorities.
 
@@ -57,6 +69,7 @@ agents:
       - Implement proper error handling and logging
       - Ensure thread safety where applicable
       - Write defensive code that handles edge cases
+      - Respect the dependency policy: use latest stable versions; only pin if compatibility requires it, with a documented reason.
       
       Provide the complete implementation with explanation of design decisions.
 
@@ -99,6 +112,7 @@ agents:
       3. **Developer Guide**: Implementation details and architecture
       4. **README**: Update if necessary
       5. **Changelog**: Document the evolution
+      6. **Dependencies**: Note any new or changed dependencies and whether pins were added with reasons.
       
       Ensure documentation is clear, comprehensive, and includes examples.
 
@@ -116,7 +130,7 @@ agents:
       Consider:
       1. **Containerization**: Docker updates if needed
       2. **Environment Variables**: New configuration requirements
-      3. **Dependencies**: Package requirement updates
+      3. **Dependencies**: Package requirement updates (ensure latest by default; only pin with documented reason)
       4. **Database Migrations**: If data schema changes
       5. **Rollback Strategy**: How to revert if issues arise
       
@@ -142,6 +156,7 @@ agents:
       3. **Prompt Updates**: Suggest improvements to agent prompts
       4. **New Capabilities**: What new agents or tools might be needed?
       5. **System Architecture**: Suggest architectural improvements
+      6. **Dependencies**: Propose periodic upgrades and remove unnecessary pins per the dependency policy.
       
       Update the seed instructions to implement improvements for future evolutions.
 
