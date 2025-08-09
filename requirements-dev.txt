@@ -6,7 +6,7 @@ pre-commit
 tox
 
 # Documentation development
-mkdocs-serve
+# Removed invalid package 'mkdocs-serve' (use `mkdocs serve` from mkdocs)
 mkdocs-macros-plugin
 
 # Code formatting and linting (dev versions)
