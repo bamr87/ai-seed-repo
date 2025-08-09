@@ -7,7 +7,7 @@ including repository operations, issue management, and pull request creation.
 
 import base64
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -295,3 +295,49 @@ class GitHubIntegration:
         except Exception as e:
             self.logger.error(f"Error updating file {file_path}: {e}")
             return False
+
+    async def find_open_issue_by_title(self, title: str, label: Optional[str] = None) -> Optional[int]:
+        """Find an open issue by exact title, optionally filtered by a label. Returns issue number or None."""
+        owner, repo = self._get_repo_info()
+        try:
+            params = {"state": "open", "per_page": 100}
+            if label:
+                params["labels"] = label
+            url = f"{self.base_url}/repos/{owner}/{repo}/issues"
+            response = requests.get(url, headers=self.headers, params=params, timeout=30)
+            if response.status_code == 200:
+                for issue in response.json():
+                    if issue.get("title") == title:
+                        return issue.get("number")
+            else:
+                self.logger.error(f"Failed to list issues: {response.status_code} - {response.text}")
+        except Exception as e:
+            self.logger.error(f"Error listing issues: {e}")
+        return None
+
+    async def create_issue(self, title: str, body: str, labels: Optional[List[str]] = None, dedupe_label: Optional[str] = None) -> Dict[str, Any]:
+        """Create a GitHub issue, optionally deduplicating by title within open issues that have a specific label."""
+        owner, repo = self._get_repo_info()
+        try:
+            if dedupe_label:
+                existing = await self.find_open_issue_by_title(title, dedupe_label)
+                if existing:
+                    self.logger.info(f"Issue already exists with same title #{existing}; adding comment instead")
+                    await self.comment_on_issue(existing, f"Duplicate failure detected. New occurrence details below:\n\n{body}")
+                    return {"success": True, "issue_number": existing, "duplicate": True}
+
+            url = f"{self.base_url}/repos/{owner}/{repo}/issues"
+            data = {"title": title, "body": body}
+            if labels:
+                data["labels"] = labels
+            response = requests.post(url, headers=self.headers, json=data, timeout=30)
+            if response.status_code == 201:
+                issue = response.json()
+                self.logger.info(f"Created issue #{issue['number']}: {issue['title']}")
+                return {"success": True, "issue_number": issue["number"], "issue_url": issue["html_url"]}
+            else:
+                self.logger.error(f"Failed to create issue: {response.status_code} - {response.text}")
+                return {"success": False, "error": f"HTTP {response.status_code}: {response.text}"}
+        except Exception as e:
+            self.logger.error(f"Error creating issue: {e}")
+            return {"success": False, "error": str(e)}

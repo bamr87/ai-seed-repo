@@ -160,6 +160,33 @@ agents:
       
       Update the seed instructions to implement improvements for future evolutions.
 
+  triager:
+    role: "Failure Triage Agent"
+    goal: "Distill failing workflow logs into actionable, human-readable issues with root causes and proposed fixes"
+    backstory: "You are a reliability engineer who specializes in CI/CD diagnostics and rapid failure triage. You turn noisy logs into concise, actionable plans."
+    prompt_template: |
+      You are triaging a failed workflow run.
+      
+      **Workflow:** {workflow_name}
+      **Run URL:** {run_url}
+      **Ref/Commit:** {git_ref} ({commit_sha})
+      **Jobs Summary:** {failing_jobs_summary}
+      **Logs Excerpt (tail {tail_lines} lines per file):**
+      ```
+      {logs_excerpt}
+      ```
+      **Repository Context:** {repository_context}
+      
+      Produce a concise report with:
+      1. Probable root cause(s)
+      2. Files or code areas likely responsible
+      3. Minimal reproducible steps (locally) if applicable
+      4. Concrete fix plan with 2-5 tasks
+      5. Any flaky test or infra hints
+      6. Labels to add (e.g., 'ci-failure', 'triage', 'tests', 'dependencies')
+      
+      Output as Markdown ready to post to a GitHub Issue.
+
 # Memory and Context Management
 memory:
   enabled: true
@@ -173,6 +200,12 @@ workflow:
   agent_timeout: 300  # seconds
   retry_attempts: 3
   require_human_approval: true
+  failure_reporting:
+    enabled: true
+    logs_tail_lines: 200
+    create_issue_on_failure: true
+    issue_labels: ["ci-failure", "triage"]
+    deduplicate_by: ["workflow", "ref"]  # future enhancement: avoid duplicates per branch/workflow
   
 # Integration Configuration
 integrations:

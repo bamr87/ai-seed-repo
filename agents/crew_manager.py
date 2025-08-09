@@ -24,40 +24,54 @@ class CrewManager:
     Deployer, Evolver) to implement evolution requests collaboratively.
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        """Initialize the crew manager with configuration."""
+    def __init__(self, config: Dict[str, Any], mode: str = "full"):
+        """Initialize the crew manager with configuration.
+        
+        Args:
+            config: Seed configuration
+            mode: 'full' to create all agents, 'triage' to only enable triager
+        """
         self.logger = setup_logger(__name__)
         self.config = config
+        self.mode = mode
         self.llm = self._initialize_llm()
         self.agents = self._create_agents()
         
     def _initialize_llm(self):
-        """Initialize the LLM based on configuration."""
+        """Initialize the LLM based on configuration. Returns None if unavailable."""
         llm_config = self.config.get('llm_config', {})
         provider = llm_config.get('provider', 'openai')
         model = llm_config.get('model', 'gpt-4o')
         temperature = llm_config.get('temperature', 0.1)
         max_tokens = llm_config.get('max_tokens', 4096)
-        
-        if provider == 'openai':
-            return ChatOpenAI(
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-        elif provider == 'anthropic':
-            return ChatAnthropic(
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-        else:
-            raise ValueError(f"Unsupported LLM provider: {provider}")
+        try:
+            if provider == 'openai':
+                return ChatOpenAI(
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+            elif provider == 'anthropic':
+                return ChatAnthropic(
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+            else:
+                raise ValueError(f"Unsupported LLM provider: {provider}")
+        except Exception as e:
+            self.logger.warning(f"LLM initialization failed; falling back to no-LLM mode: {e}")
+            return None
             
     def _create_agents(self) -> Dict[str, Agent]:
-        """Create all specialized agents with their configurations."""
+        """Create all specialized agents with their configurations. May be empty if no LLM."""
         agents_config = self.config.get('agents', {})
-        agents = {}
+        agents: Dict[str, Agent] = {}
+        
+        # If LLM is unavailable, only allow triage fallback without agents
+        if self.llm is None:
+            # Create no agents; run_triage_report will fallback
+            return agents
         
         # Common tools available to all agents
         common_tools = [
@@ -65,6 +79,22 @@ class CrewManager:
             FileWriteTool(),
             DirectoryReadTool()
         ]
+        
+        # In 'triage' mode, only create triager agent
+        if self.mode == 'triage':
+            triager_config = agents_config.get('triager', {})
+            if triager_config:
+                agents['triager'] = Agent(
+                    role=triager_config.get('role', 'Failure Triage Agent'),
+                    goal=triager_config.get('goal', 'Distill failing workflow logs into actionable issues'),
+                    backstory=triager_config.get('backstory', 'Reliability engineer for CI/CD diagnostics'),
+                    tools=common_tools,
+                    llm=self.llm,
+                    verbose=True,
+                    allow_delegation=False,
+                    max_iter=2
+                )
+            return agents
         
         # Planner Agent
         planner_config = agents_config.get('planner', {})
@@ -143,6 +173,20 @@ class CrewManager:
             allow_delegation=False,
             max_iter=2
         )
+        
+        # Failure Triager Agent
+        triager_config = agents_config.get('triager', {})
+        if triager_config:
+            agents['triager'] = Agent(
+                role=triager_config.get('role', 'Failure Triage Agent'),
+                goal=triager_config.get('goal', 'Distill failing workflow logs into actionable issues'),
+                backstory=triager_config.get('backstory', 'Reliability engineer for CI/CD diagnostics'),
+                tools=common_tools,
+                llm=self.llm,
+                verbose=True,
+                allow_delegation=False,
+                max_iter=2
+            )
         
         return agents
         
@@ -322,3 +366,26 @@ class CrewManager:
         # In a real implementation, this would update the seed instructions
         # or store insights in a vector database for future reference
         self.logger.info("Evolution insights stored for future improvements")
+
+    async def run_triage_report(self, triage_input: Dict[str, Any]) -> str:
+        """Run the triager agent to produce a Markdown triage report from logs.
+        
+        Args:
+            triage_input: Context including workflow_name, run_url, git_ref, commit_sha, failing_jobs_summary, logs_excerpt, repository_context, tail_lines
+        Returns:
+            Markdown string suitable for a GitHub Issue body.
+        """
+        if self.llm is None or 'triager' not in self.agents:
+            self.logger.warning("Triager unavailable (no LLM or agent not configured); returning raw logs excerpt")
+            return triage_input.get('logs_excerpt', '')[:5000]
+        
+        triager_template = self.config.get('agents', {}).get('triager', {}).get('prompt_template', '')
+        description = self._format_prompt(triager_template, triage_input)
+        triage_task = Task(
+            description=description,
+            agent=self.agents['triager'],
+            expected_output="Markdown report summarizing failure, with root causes and proposed fixes"
+        )
+        crew = Crew(agents=[self.agents['triager']], tasks=[triage_task], process=Process.sequential, verbose=2)
+        result = await asyncio.to_thread(crew.kickoff)
+        return str(result) if result else "Failed to generate triage report. See logs excerpt above."

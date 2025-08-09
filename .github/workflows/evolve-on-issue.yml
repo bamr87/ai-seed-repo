@@ -7,6 +7,11 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
 jobs:
   trigger-evolution:
     runs-on: ubuntu-latest
@@ -30,12 +35,8 @@ jobs:
 
       - name: Configure environment
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> $GITHUB_ENV
-          echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" >> $GITHUB_ENV
           echo "GITHUB_TOKEN=${GITHUB_TOKEN}" >> $GITHUB_ENV
 
       - name: Run evolution workflow
@@ -65,3 +66,24 @@ jobs:
               issue_number: issue_number,
               body: '🤖 **Evolution Initiated!**\n\nThe AI agent crew has been dispatched to implement your request. You can monitor progress in the Actions tab and expect a pull request shortly.\n\n*Agents at work:* Planner → Coder → Tester → Documenter → Deployer'
             });
+
+      - name: Prepare triage on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y unzip
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          gh run download ${{ github.run_id }} --dir logs || true
+          if ls logs/*.zip 1> /dev/null 2>&1; then
+            unzip -o "logs/*.zip" -d logs || true
+          fi
+          python scripts/triage_failure.py \
+            --workflow-name "${{ github.workflow }}" \
+            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --git-ref "${{ github.ref }}" \
+            --commit-sha "${{ github.sha }}" \
+            --logs-root logs \
+            --tail-lines 200

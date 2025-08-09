@@ -13,6 +13,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
+  actions: read
 
 jobs:
   build:
@@ -48,6 +50,26 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/
+
+      - name: Prepare triage on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y unzip
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          gh run download ${{ github.run_id }} --dir logs || true
+          if ls logs/*.zip 1> /dev/null 2>&1; then
+            unzip -o "logs/*.zip" -d logs || true
+          fi
+          python scripts/triage_failure.py \
+            --workflow-name "${{ github.workflow }}" \
+            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --git-ref "${{ github.ref }}" \
+            --commit-sha "${{ github.sha }}" \
+            --logs-root logs \
+            --tail-lines 200
 
   deploy:
     runs-on: ubuntu-latest
