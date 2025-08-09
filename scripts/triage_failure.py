@@ -13,14 +13,21 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+
+# Ensure repository root is on sys.path when running this file directly
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 # Local imports (GitHubIntegration is lightweight)
-from agents.github_integration import GitHubIntegration
-from utils.logger import setup_logger
+from agents.github_integration import GitHubIntegration  # noqa: E402
+from utils.logger import setup_logger  # noqa: E402
 
 logger = setup_logger(__name__)
 
