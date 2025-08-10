@@ -25,14 +25,22 @@ class TestWorkflowExecution:
         
         # These tools should be available in the environment
         tools_to_check = ['flake8', 'black', 'isort', 'mypy', 'pytest']
+        optional_tools = {'mypy'}
         
         for tool in tools_to_check:
             try:
                 result = subprocess.run([sys.executable, '-m', tool, '--version'], 
                                       capture_output=True, text=True, timeout=10)
-                assert result.returncode == 0 or tool == 'mypy', f"{tool} not available or not working"
+                if tool in optional_tools:
+                    if result.returncode != 0:
+                        pytest.skip(f"{tool} is optional and not available or not working in test environment")
+                else:
+                    assert result.returncode == 0, f"{tool} not available or not working"
             except (subprocess.TimeoutExpired, FileNotFoundError):
-                pytest.skip(f"{tool} not available in test environment")
+                if tool in optional_tools:
+                    pytest.skip(f"{tool} is optional and not available in test environment")
+                else:
+                    pytest.skip(f"{tool} not available in test environment")
     
     def test_docker_workflow_simulation(self):
         """Simulate Docker workflow steps."""
