@@ -38,18 +38,25 @@ def tail_lines(text: str, n: int) -> str:
 
 
 def collect_logs_excerpt(root: Path, tail: int) -> tuple[str, str]:
-    """Collect *.txt logs under root, return (jobs_summary, excerpt_markdown)."""
-    txt_files: List[Path] = sorted(root.rglob("*.txt"))
+    """Collect *.txt and *.log logs under root, return (jobs_summary, excerpt_markdown)."""
+    if not root.exists():
+        return ("Logs root not found.", "No logs available.")
+
+    # Include both .txt (per-step logs) and .log files
+    txt_files: List[Path] = sorted(list(root.rglob("*.txt")) + list(root.rglob("*.log")))
     if not txt_files:
         return ("No log files found.", "No logs available.")
 
     parts: List[str] = []
     job_lines: List[str] = []
+    max_per_file = 2_000_000  # 2MB safeguard to avoid huge payloads
     for f in txt_files:
         try:
             content = f.read_text(errors="ignore")
         except Exception:
             continue
+        if len(content) > max_per_file:
+            content = content[-max_per_file:]
         excerpt = tail_lines(content, tail)
         rel = f.relative_to(root)
         job_lines.append(f"- {rel}")
