@@ -1,7 +1,7 @@
 site_name: AI Seed Repository Documentation
 site_description: Self-evolving application powered by AI agents
-site_url: https://your-username.github.io/ai-seed-repo
-repo_url: https://github.com/your-username/ai-seed-repo
+site_url: https://bamr87.github.io/ai-seed-repo
+repo_url: https://github.com/bamr87/ai-seed-repo
 
 theme:
   name: material
@@ -39,7 +39,7 @@ plugins:
             show_category_heading: true
   - gen-files:
       scripts:
-        - scripts/generate_api_docs.py
+        - scripts/generate_docs.py
   - literate-nav:
       nav_file: SUMMARY.md
 
@@ -89,6 +89,6 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/your-username/ai-seed-repo
+      link: https://github.com/bamr87/ai-seed-repo
   version:
     provider: mike

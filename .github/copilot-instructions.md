@@ -6,7 +6,8 @@ This repository implements a self-evolving application framework where AI agents
 
 The system follows a **multi-agent workflow pattern**:
 - GitHub issues trigger agent orchestration via Actions
-- CrewAI coordinates specialized agents (Planner → Coder → Tester → Documenter → Deployer)
+- CrewAI coordinates specialized agents (Planner → Coder → Tester → Documenter → Deployer → Evolver)
+- Triager agent handles workflow failure analysis and creates actionable reports
 - All changes create PRs for human review before deployment
 - The Evolver agent continuously improves the system based on outcomes
 
@@ -28,8 +29,16 @@ The orchestrator processes evolution requests by:
 - Designed to be extended by agents (starts as simple API, grows via evolution)
 - Includes evolution logging endpoints for agent coordination
 
+### Utilities (`utils/`)
+- `logger.py` - Centralized logging configuration
+- Shared utility functions for agents and application
+
+### Scripts (`scripts/`)
+- `generate_docs.py` - Documentation generation automation
+- `triage_failure.py` - Workflow failure analysis and reporting
+
 ### Configuration (`seed_instructions.yaml`)
-- Contains agent prompts, LLM configs, and workflow rules
+- Contains agent prompts, LLM configs, workflow rules, and all system configurations
 - The Evolver agent can modify this file to improve system performance
 - Use precise prompt templates with `{variable}` placeholders
 
