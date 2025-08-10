@@ -82,7 +82,8 @@ jobs:
             -H "Accept: application/zip" \
             repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs > logs.zip || true
           unzip -o logs.zip -d logs || true
-          echo "Extracted log files:" && find logs -type f | wc -l || true
+          echo "Extracted log files:"
+          find logs -type f | wc -l || true
           python scripts/triage_failure.py \
             --workflow-name "${{ github.workflow }}" \
             --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
