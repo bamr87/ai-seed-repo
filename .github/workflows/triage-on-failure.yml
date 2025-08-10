@@ -38,17 +38,21 @@ jobs:
       - name: Download logs for failed run
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p logs
           echo "Downloading logs for run ID: ${{ github.event.workflow_run.id }}"
           gh api \
-            -H "Accept: application/vnd.github+json" \
+            -H "Accept: application/zip" \
             repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/logs > logs.zip
           unzip -o logs.zip -d logs || true
+          echo "Extracted log files:"
+          find logs -type f | wc -l || true
 
       - name: Create triage issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/triage_failure.py \
             --workflow-name "${{ github.event.workflow_run.name }}" \
