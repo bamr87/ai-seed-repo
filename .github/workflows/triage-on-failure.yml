@@ -26,14 +26,18 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install minimal dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pyyaml requests
 
       - name: Ensure unzip is available
         run: |
           sudo apt-get update -y && sudo apt-get install -y unzip
+
+      - name: Verify GitHub CLI
+        run: |
+          gh --version || (sudo apt-get update -y && sudo apt-get install -y gh && gh --version)
 
       - name: Download logs for failed run
         env:
