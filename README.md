@@ -22,6 +22,7 @@ GitHub Issue → Workflow Trigger → Agent Orchestra → Code/Test/Doc → PR �
 - **Documenter**: Maintains up-to-date documentation
 - **Deployer**: Handles deployment and infrastructure
 - **Evolver**: Reflects on outcomes and improves the system
+- **Triager**: Analyzes workflow failures and creates actionable reports
 
 ## 🚀 Quick Start
 
@@ -71,8 +72,9 @@ ai-seed-repo/
 ├── src/                    # Evolvable application code
 ├── tests/                  # Automated test suites
 ├── docs/                   # Auto-generated documentation
-├── config/                 # System configurations
-└── seed_instructions.yaml  # AI agent prompts and rules
+├── utils/                  # Utility modules (logging, etc.)
+├── scripts/                # Helper scripts (docs generation, triage)
+└── seed_instructions.yaml  # AI agent prompts and configurations
 ```
 
 ## 🧠 How It Works
@@ -89,10 +91,10 @@ ai-seed-repo/
 ## 🔧 Configuration
 
 Key configuration files:
-- `seed_instructions.yaml`: Agent prompts and behavioral rules
-- `config/agents.yaml`: Agent-specific configurations
-- `config/llm.yaml`: LLM provider settings
+- `seed_instructions.yaml`: Agent prompts, behavioral rules, and all system configurations
 - `.env`: Environment variables and API keys
+- `mkdocs.yml`: Documentation generation settings
+- `requirements.txt` & `requirements-dev.txt`: Python dependencies
 
 ## 📖 Documentation
 
@@ -102,7 +104,7 @@ Documentation is automatically generated and deployed:
 - **Agent Guides**: How each agent operates
 - **Evolution Log**: History of autonomous improvements
 
-Visit the [documentation site](https://your-username.github.io/ai-seed-repo) for comprehensive guides.
+Visit the [documentation site](https://bamr87.github.io/ai-seed-repo) for comprehensive guides.
 
 ## 🛡️ Safety & Best Practices
 
