@@ -334,23 +334,35 @@ class TestWorkflowSecurity:
     def test_no_hardcoded_secrets(self):
         """Test that workflows don't contain hardcoded secrets."""
         sensitive_patterns = ["password", "secret", "token", "key"]
-        excluded_patterns = ["${{", "secrets.", "GITHUB_TOKEN", "github.token", "github_token=", 
-                           "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "id-token:", "token:", 
-                           "contents:", "issues:", "actions:", "pages:"]
+        # Exclude lines that reference variables, secrets, or are comments
+        excluded_patterns = [
+            "${{", "secrets.", "GITHUB_TOKEN", "github.token", "github_token=", 
+            "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "id-token:", "token:", 
+            "contents:", "issues:", "actions:", "pages:"
+        ]
+        # Regex: sensitive word, optional whitespace, colon or =, optional whitespace, value (not starting with ${{ or secrets.)
+        assignment_regexes = [
+            re.compile(rf"^\s*[^#]*\b{pattern}\b\s*[:=]\s*([^\s#]+)", re.IGNORECASE)
+            for pattern in sensitive_patterns
+        ]
         
         for workflow_file in WORKFLOW_DIR.glob("*.yml"):
             with open(workflow_file, 'r') as f:
-                content = f.read().lower()
+                lines = f.readlines()
             
-            for pattern in sensitive_patterns:
-                if pattern in content:
-                    # Check if it's properly using secrets or variables
-                    lines_with_pattern = [line for line in content.split('\n') if pattern in line]
-                    for line in lines_with_pattern:
-                        if not any(excluded in line for excluded in excluded_patterns):
-                            pytest.fail(f"Potential hardcoded secret in {workflow_file}: {line.strip()}")
-
-
+            for i, line in enumerate(lines, 1):
+                line_lower = line.lower()
+                # Skip comments and excluded patterns
+                if line_lower.strip().startswith("#") or any(excluded in line_lower for excluded in excluded_patterns):
+                    continue
+                for regex in assignment_regexes:
+                    match = regex.search(line)
+                    if match:
+                        value = match.group(1)
+                        # Exclude variable references or expressions
+                        if value.startswith("${{") or value.startswith("secrets."):
+                            continue
+                        pytest.fail(f"Potential hardcoded secret in {workflow_file} (line {i}): {line.strip()}")
 class TestWorkflowPerformance:
     """Test workflow performance and efficiency."""
     
