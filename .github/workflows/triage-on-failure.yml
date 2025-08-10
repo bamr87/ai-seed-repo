@@ -46,7 +46,8 @@ jobs:
             -H "Accept: application/zip" \
             repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/logs > logs.zip
           unzip -o logs.zip -d logs || true
-          echo "Extracted log files:" && find logs -type f | wc -l || true
+          echo "Extracted log files:"
+          find logs -type f | wc -l || true
 
       - name: Create triage issue
         env:
