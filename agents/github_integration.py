@@ -39,9 +39,19 @@ class GitHubIntegration:
         }
         
     def _get_repo_info(self) -> tuple[str, str]:
-        """Extract owner and repo from repository context."""
-        # This would typically be passed in or configured
-        # For now, extracting from current git context
+        """Extract owner and repo from environment or git context."""
+        # Prefer explicit environment provided by GitHub Actions
+        repo_env = os.getenv("GITHUB_REPOSITORY")  # format: owner/repo
+        if repo_env and "/" in repo_env:
+            owner, repo = repo_env.split("/", 1)
+            return owner, repo
+
+        owner_env = os.getenv("GITHUB_REPOSITORY_OWNER")
+        repo_name_env = os.getenv("GITHUB_REPOSITORY_NAME")
+        if owner_env and repo_name_env:
+            return owner_env, repo_name_env
+
+        # Fallback to parsing git remote
         try:
             import subprocess
             result = subprocess.run(['git', 'remote', 'get-url', 'origin'], 

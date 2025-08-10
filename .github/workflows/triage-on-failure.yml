@@ -48,10 +48,10 @@ jobs:
           echo "Downloading logs for run ID: ${{ github.event.workflow_run.id }}"
           gh api \
             -H "Accept: application/zip" \
-            repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/logs > logs.zip
+            repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/logs > logs.zip || true
           unzip -o logs.zip -d logs || true
-          echo "Extracted log files:"
-          find logs -type f | wc -l || true
+          echo "Extracted log files:" && find logs -type f | wc -l || true
+          echo "Sample of extracted files:" && find logs -type f | head -n 25 || true
 
       - name: Create triage issue
         env:
@@ -65,3 +65,12 @@ jobs:
             --commit-sha "${{ github.event.workflow_run.head_sha }}" \
             --logs-root logs \
             --tail-lines 200
+
+      - name: Upload logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-run-logs-${{ github.event.workflow_run.id }}
+          path: logs
+          if-no-files-found: warn
+          retention-days: 7
